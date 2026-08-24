@@ -1,69 +1,258 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import React, { useState } from 'react';
+import Image from 'next/image';
+import {
+  Button as RACButton,
+  Form,
+  Input,
+  Label,
+  Tag,
+  TagGroup,
+  TagList,
+  TextField,
+} from 'react-aria-components';
+import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Play, Plus, X } from 'lucide-react';
+import { NumberField } from '@/components/ui/NumberField';
+import { Slider } from '@/components/ui/Slider';
+import { sliderToPrice } from '@/utils/slider';
+
+const Home = () => {
+  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
+  const [newLocation, setNewLocation] = useState('');
+  const [priceRange, setPriceRange] = useState<number[]>([0, 100]);
+  const [minSurface, setMinSurface] = useState<number>(0);
+  const [minRooms, setMinRooms] = useState<number>(0);
+  const [minBedrooms, setMinBedrooms] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+
+  const handleBedroomsChange = (val: number) => {
+    const newBedrooms = isNaN(val) ? 0 : val;
+    setMinBedrooms(newBedrooms);
+    if (newBedrooms > minRooms) {
+      setMinRooms(newBedrooms);
+    }
+  };
+
+  const handleRoomsChange = (val: number) => {
+    const newRooms = isNaN(val) ? 0 : val;
+    setMinRooms(newRooms);
+  };
+
+  const handleAddLocation = (e?: React.SyntheticEvent) => {
+    if (e) e.preventDefault();
+    if (newLocation.trim()) {
+      setLocations((prev) => [
+        ...prev,
+        { id: Date.now().toString(), name: newLocation.trim() },
+      ]);
+      setNewLocation('');
+    }
+  };
+
+  const handleRemoveLocation = (id: string) => {
+    setLocations((prev) => prev.filter((loc) => loc.id !== id));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      handleAddLocation();
+    }
+  };
+
+  const handleRunPipeline = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setStatus('Fetching listings via ZenRows & analyzing features with Gemini...');
+
+    setTimeout(() => {
+      setLoading(false);
+      setStatus('Successfully analyzed properties and updated Google Sheets!');
+    }, 2500);
+  };
+
+  const isInvalidRoomCount = minRooms < minBedrooms;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex justify-center p-6 sm:p-12 font-sans">
+      <div className="w-full max-w-2xl space-y-8">
+        
+        {/* Header Logo */}
+        <div className="w-full flex justify-center pt-2">
+          <Image
+            src="/logo_immoo_txt.png"
+            alt="IMMOO Logo"
+            width={600}
+            height={150}
+            className="w-full h-auto object-contain brightness-0 invert opacity-95"
+            priority
+          />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
+
+        {/* Subheader */}
+        <div className="flex justify-between items-center border-b border-slate-800 pb-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-white">
+              Search Control Center
+            </h1>
+          </div>
           <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            href="https://docs.google.com/spreadsheets"
             target="_blank"
-            rel="noopener noreferrer"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-400 bg-emerald-950/50 border border-emerald-800 px-3.5 py-2 rounded-full hover:bg-emerald-900/50 transition"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+            Google Sheet <ExternalLink size={14} />
+          </a>
+        </div>
+
+        <Form onSubmit={handleRunPipeline} className="space-y-6">
+          
+          {/* Target Locations */}
+          <div className="space-y-3">
+            <Label className="text-sm font-bold uppercase tracking-wider text-slate-300 block">
+              Target Locations
+            </Label>
+
+            {locations.length > 0 && (
+              <TagGroup aria-label="Target Locations">
+                <TagList className="flex flex-wrap gap-2 mb-3">
+                  {locations.map((loc) => (
+                    <Tag
+                      key={loc.id}
+                      id={loc.id}
+                      className="inline-flex items-center gap-2 text-sm font-medium bg-indigo-950/80 text-indigo-200 border border-indigo-800 px-3 py-1.5 rounded-lg hover:bg-indigo-900 transition cursor-default"
+                    >
+                      <span>{loc.name}</span>
+                      <RACButton
+                        slot="remove"
+                        onPress={() => handleRemoveLocation(loc.id)}
+                        aria-label={`Remove ${loc.name}`}
+                        className="text-indigo-400 hover:text-white transition cursor-pointer focus:outline-none"
+                      >
+                        <X size={14} />
+                      </RACButton>
+                    </Tag>
+                  ))}
+                </TagList>
+              </TagGroup>
+            )}
+
+            <div className="flex gap-2">
+              <TextField
+                aria-label="New target location input"
+                value={newLocation}
+                onChange={setNewLocation}
+                className="flex-1"
+              >
+                <Input
+                  onKeyDown={handleKeyDown}
+                  placeholder="Enter city or zip code (Press Enter to add)..."
+                  className="w-full bg-slate-900 border border-slate-800 text-base px-4 py-3 rounded-xl focus:outline-none focus:border-indigo-500 text-slate-100 placeholder:text-slate-500 transition"
+                />
+              </TextField>
+
+              <RACButton
+                onPress={() => handleAddLocation()}
+                className="bg-slate-900 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 px-5 py-3 rounded-xl text-sm font-semibold text-slate-200 hover:text-white transition flex items-center gap-1.5 cursor-pointer focus:outline-none"
+              >
+                <Plus size={16} /> Add
+              </RACButton>
+            </div>
+          </div>
+
+          {/* Official React Aria Multi-Thumb Price Slider */}
+          <div className="bg-slate-900/60 p-5 border border-slate-800 rounded-2xl">
+            <Slider<number[]>
+              label="Price Range"
+              value={priceRange}
+              onChange={(val) => setPriceRange(val)}
+              minValue={0}
+              maxValue={100}
+              step={1}
+              thumbLabels={['Min Price', 'Max Price']}
+              formatValue={(vals) =>
+                `€${sliderToPrice(vals[0]).toLocaleString()} – €${sliderToPrice(vals[1]).toLocaleString()}`
+              }
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </div>
+
+          {/* Steppers */}
+          <div className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <NumberField
+                label="Min Surface (m²)"
+                value={minSurface}
+                onChange={setMinSurface}
+                minValue={0}
+                maxValue={1000}
+                formatOptions={{ style: 'decimal' }}
+              />
+
+              <NumberField
+                label="Min Rooms"
+                value={minRooms}
+                onChange={handleRoomsChange}
+                minValue={minBedrooms}
+                maxValue={20}
+                formatOptions={{ style: 'decimal' }}
+              />
+
+              <NumberField
+                label="Min Bedrooms"
+                value={minBedrooms}
+                onChange={handleBedroomsChange}
+                minValue={0}
+                maxValue={10}
+                formatOptions={{ style: 'decimal' }}
+              />
+            </div>
+
+            {isInvalidRoomCount && (
+              <div className="flex items-center gap-2 text-xs font-semibold text-rose-400 bg-rose-950/40 border border-rose-900/60 p-3 rounded-xl">
+                <AlertCircle size={14} />
+                <span>Total rooms cannot be fewer than bedrooms.</span>
+              </div>
+            )}
+          </div>
+
+          {/* Status Notification */}
+          {status && (
+            <div className="flex items-center gap-3 p-4 bg-slate-900 border border-slate-800 text-sm font-medium text-slate-200 rounded-xl">
+              {loading ? (
+                <Loader2 size={18} className="animate-spin text-indigo-400" />
+              ) : (
+                <CheckCircle2 size={18} className="text-emerald-400" />
+              )}
+              <span>{status}</span>
+            </div>
+          )}
+
+          {/* Submit Action Button */}
+          <RACButton
+            type="submit"
+            isDisabled={loading || isInvalidRoomCount}
+            className="w-full bg-indigo-600 hover:bg-indigo-500 data-[disabled]:bg-slate-800 data-[disabled]:text-slate-500 text-white font-bold text-base py-3.5 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 active:scale-[0.99] cursor-pointer focus:outline-none"
           >
-            Documentation
-          </a>
-        </div>
-      </main>
+            {loading ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                Executing Pipeline...
+              </>
+            ) : (
+              <>
+                <Play size={18} fill="currentColor" />
+                Search
+              </>
+            )}
+          </RACButton>
+        </Form>
+      </div>
     </div>
   );
-}
+};
+
+export default Home;

@@ -1,0 +1,18 @@
+{
+  // Disable Oxc language server formatters/linters
+  "oxc.enable": false,
+
+  // Enable standard TS diagnostics
+  "typescript.validate.enable": true,
+  "javascript.validate.enable": true,
+
+  // Force Prettier as the default formatter
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
+}
