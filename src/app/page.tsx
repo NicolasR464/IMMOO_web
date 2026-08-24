@@ -7,6 +7,7 @@ import {
   Form,
   Input,
   Label,
+  Separator,
   Tag,
   TagGroup,
   TagList,
@@ -92,8 +93,10 @@ const Home = () => {
           />
         </div>
 
+        <Separator />
+
         {/* Subheader */}
-        <div className="flex justify-between items-center border-b border-slate-800 pb-6">
+        <div className="flex justify-between items-center pb-6">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-white">
               Search Control Center
