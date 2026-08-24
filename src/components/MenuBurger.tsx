@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { signOut } from 'next-auth/react'
 import {
   Button,
@@ -62,37 +61,31 @@ export default function MenuBurger({ isLoggedIn, userEmail }: MenuBurgerProps) {
           )}
 
           {/* Navigation Items */}
-          <MenuItem href="/" className="group outline-none cursor-pointer rounded-xl">
-            <Link
-              href="/"
-              className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-300 rounded-xl group-data-[focused]:bg-slate-900 group-data-[focused]:text-white transition"
-            >
-              <Home size={16} className="text-slate-400 group-data-[focused]:text-indigo-400" />
-              <span>Home</span>
-            </Link>
+          <MenuItem
+            href="/"
+            className="group flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-300 rounded-xl outline-none cursor-pointer data-[focused]:bg-slate-900 data-[focused]:text-white transition"
+          >
+            <Home size={16} className="text-slate-400 group-data-[focused]:text-indigo-400" />
+            <span>Home</span>
           </MenuItem>
 
           {isLoggedIn && (
-            <MenuItem href="/dashboard" className="group outline-none cursor-pointer rounded-xl">
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-300 rounded-xl group-data-[focused]:bg-slate-900 group-data-[focused]:text-white transition"
-              >
-                <LayoutDashboard size={16} className="text-slate-400 group-data-[focused]:text-indigo-400" />
-                <span>Dashboard</span>
-              </Link>
+            <MenuItem
+              href="/dashboard"
+              className="group flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-300 rounded-xl outline-none cursor-pointer data-[focused]:bg-slate-900 data-[focused]:text-white transition"
+            >
+              <LayoutDashboard size={16} className="text-slate-400 group-data-[focused]:text-indigo-400" />
+              <span>Dashboard</span>
             </MenuItem>
           )}
 
           {isLoggedIn && (
-            <MenuItem href="/settings" className="group outline-none cursor-pointer rounded-xl">
-              <Link
-                href="/settings"
-                className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-300 rounded-xl group-data-[focused]:bg-slate-900 group-data-[focused]:text-white transition"
-              >
-                <Settings size={16} className="text-slate-400 group-data-[focused]:text-indigo-400" />
-                <span>Settings</span>
-              </Link>
+            <MenuItem
+              href="/settings"
+              className="group flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-300 rounded-xl outline-none cursor-pointer data-[focused]:bg-slate-900 data-[focused]:text-white transition"
+            >
+              <Settings size={16} className="text-slate-400 group-data-[focused]:text-indigo-400" />
+              <span>Settings</span>
             </MenuItem>
           )}
 
@@ -102,20 +95,18 @@ export default function MenuBurger({ isLoggedIn, userEmail }: MenuBurgerProps) {
           {isLoggedIn ? (
             <MenuItem
               onAction={() => signOut({ callbackUrl: '/' })}
-              className="group flex items-center gap-3 px-3 py-2 text-sm font-medium text-rose-400 rounded-xl cursor-pointer group-data-[focused]:bg-rose-950/40 group-data-[focused]:text-rose-300 transition outline-none"
+              className="group flex items-center gap-3 px-3 py-2 text-sm font-medium text-rose-400 rounded-xl cursor-pointer data-[focused]:bg-rose-950/40 data-[focused]:text-rose-300 transition outline-none"
             >
               <LogOut size={16} />
               <span>Logout</span>
             </MenuItem>
           ) : (
-            <MenuItem href="/api/auth/signin" className="group outline-none cursor-pointer rounded-xl">
-              <Link
-                href="/api/auth/signin"
-                className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-emerald-400 rounded-xl group-data-[focused]:bg-emerald-950/40 group-data-[focused]:text-emerald-300 transition"
-              >
-                <LogIn size={16} />
-                <span>Sign In</span>
-              </Link>
+            <MenuItem
+              href="/api/auth/signin"
+              className="group flex items-center gap-3 px-3 py-2 text-sm font-medium text-emerald-400 rounded-xl outline-none cursor-pointer data-[focused]:bg-emerald-950/40 data-[focused]:text-emerald-300 transition"
+            >
+              <LogIn size={16} />
+              <span>Sign In</span>
             </MenuItem>
           )}
         </Menu>
