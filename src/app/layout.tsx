@@ -1,8 +1,16 @@
 import './globals.css';
 import Image from 'next/image';
 import { ExternalLink } from 'lucide-react';
+import { getSession } from '@/handlers/auth';
+import MenuBurger from '@/components/MenuBurger';
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+const RootLayout = async ({
+    children,
+}: Readonly<{
+    children: React.ReactNode
+}>) => {
+  const session = await getSession();
+
   return (
     <html lang="en" suppressHydrationWarning className="h-full dark">
       <body
@@ -24,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </filter>
         </svg>
 
+        {/* Global Navigation Header */}
         <header className="w-full border-b border-slate-800/80 bg-slate-950 sticky top-0 z-50">
           <div className="w-full px-6 sm:px-10 py-3.5 flex items-center justify-between">
             {/* Logo on far left */}
@@ -38,15 +47,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               />
             </div>
 
-            {/* Google Sheet Action */}
-            <a
-              href="https://docs.google.com/spreadsheets"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-800/80 px-4 py-2 rounded-full hover:bg-emerald-900/50 transition cursor-pointer"
-            >
-              Google Sheet <ExternalLink size={13} />
-            </a>
+            {/* Header Actions (Google Sheet + Auth Burger Menu) */}
+            <div className="flex items-center gap-3 sm:gap-4">
+              <a
+                href="https://docs.google.com/spreadsheets"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-800/80 px-4 py-2 rounded-full hover:bg-emerald-900/50 transition cursor-pointer"
+              >
+                Google Sheet <ExternalLink size={13} />
+              </a>
+
+              {/* Burger Menu Component */}
+              <MenuBurger
+                isLoggedIn={!!session?.user}
+                userEmail={session?.user?.email}
+              />
+            </div>
           </div>
         </header>
 
@@ -55,3 +72,5 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+
+export default RootLayout
