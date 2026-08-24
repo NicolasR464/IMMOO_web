@@ -1,35 +1,44 @@
-import { exec } from 'child_process';
 import { NextResponse } from 'next/server';
-import util from 'util';
+import ky from 'ky';
+import { endpoints } from '@/utils/constants';
 
-const execAsync = util.promisify(exec);
+const SCRAPPER_BASE_URL = process.env.SCRAPPER_BASE_URL
 
 export async function POST(req: Request) {
-  try {
-    const body = await req.json();
+  const body = await req.json();
 
-    // Map UI payload to environment variable overrides for Python pipeline
-    const env = {
-      ...process.env,
-      SEARCH_MIN_PRICE: body.minPrice.toString(),
-      SEARCH_MAX_PRICE: body.maxPrice.toString(),
-      SEARCH_MIN_SPACE: body.minSpace.toString(),
-      SEARCH_MIN_ROOMS: body.minRooms.toString(),
-      SEARCH_LOCATIONS: body.locations.join(','),
-    };
+  // Forward payload to FastAPI background worker
+  const data = await ky
+    .post(SCRAPPER_BASE_URL + endpoints.external.scrapper.MAIN, {
+      headers: {
+        Authorization: `Bearer ${process.env.SCRAPER_API_KEY}`,
+      },
+      json: {
+        locations: body.locations,
+        minPrice: body.minPrice,
+        maxPrice: body.maxPrice,
+        minSpace: body.minSpace,
+        minRooms: body.minRooms,
+        minBedrooms: body.minBedrooms,
+      },
+    })
+    .json<{ success: boolean; message: string; filters: Record<string, unknown> }>()
+    .catch((err: Error) => ({
+      success: false,
+      message: err.message || 'FastAPI service execution failed.',
+      filters: {},
+    }));
 
-    // Execute Python CLI scraper package using uv
-    const { stdout, stderr } = await execAsync('uv run python -m src.cli', { env });
-
-    return NextResponse.json({
-      success: true,
-      message: 'Scraper execution completed.',
-      output: stdout,
-    });
-  } catch (error: any) {
+  if (!data.success) {
     return NextResponse.json(
-      { success: false, message: error.message },
+      { success: false, message: data.message },
       { status: 500 }
     );
   }
+
+  return NextResponse.json({
+    success: true,
+    message: data.message || 'Scraping job queued successfully.',
+    filters: data.filters,
+  });
 }
