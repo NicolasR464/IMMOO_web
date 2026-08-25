@@ -5,6 +5,7 @@ import { endpoints } from '@/utils/constants';
 
 export async function POST(req: Request) {
   const session = await auth();
+  
 
   if (!session?.accessToken) {
     return NextResponse.json(
@@ -20,7 +21,8 @@ export async function POST(req: Request) {
       headers: {
         Authorization: `Bearer ${session?.accessToken}`,
       },
-      json: body
+      json: body,
+      timeout: 90000,
     })
     .json<{ success: boolean; message: string }>()
     .catch((err: Error) => ({
