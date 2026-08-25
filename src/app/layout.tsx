@@ -1,15 +1,11 @@
 import './globals.css';
 import Image from 'next/image';
 import { ExternalLink } from 'lucide-react';
-import { getSession } from '@/handlers/auth';
+import { auth } from '@/handlers/auth';
 import MenuBurger from '@/components/MenuBurger';
 
-const RootLayout = async ({
-    children,
-}: Readonly<{
-    children: React.ReactNode
-}>) => {
-  const session = await getSession();
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth();
 
   return (
     <html lang="en" suppressHydrationWarning className="h-full dark">
@@ -72,5 +68,3 @@ const RootLayout = async ({
     </html>
   );
 }
-
-export default RootLayout

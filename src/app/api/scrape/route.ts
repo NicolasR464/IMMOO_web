@@ -1,35 +1,35 @@
-import { exec } from 'child_process';
 import { NextResponse } from 'next/server';
-import util from 'util';
-
-const execAsync = util.promisify(exec);
+import { auth } from '@/handlers/auth';
+import ky from 'ky';
+import { endpoints } from '@/utils/constants';
 
 export async function POST(req: Request) {
-  try {
-    const body = await req.json();
+  const session = await auth();
 
-    // Map UI payload to environment variable overrides for Python pipeline
-    const env = {
-      ...process.env,
-      SEARCH_MIN_PRICE: body.minPrice.toString(),
-      SEARCH_MAX_PRICE: body.maxPrice.toString(),
-      SEARCH_MIN_SPACE: body.minSpace.toString(),
-      SEARCH_MIN_ROOMS: body.minRooms.toString(),
-      SEARCH_LOCATIONS: body.locations.join(','),
-    };
-
-    // Execute Python CLI scraper package using uv
-    const { stdout, stderr } = await execAsync('uv run python -m src.cli', { env });
-
-    return NextResponse.json({
-      success: true,
-      message: 'Scraper execution completed.',
-      output: stdout,
-    });
-  } catch (error: any) {
+  if (!session?.accessToken) {
     return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
+      { success: false, message: 'Unauthorized: Missing Google OAuth token.' },
+      { status: 401 }
     );
   }
+
+  const body = await req.json();
+
+  const data = await ky
+    .post(process.env.SCRAPPER_BASE_URL + endpoints.external.scrapper.MAIN, {
+      headers: {
+        Authorization: `Bearer ${process.env.SCRAPER_API_KEY}`,
+      },
+      json: {
+        ...body,
+        googleAccessToken: session.accessToken, // Pass OAuth token to Python
+      },
+    })
+    .json<{ success: boolean; message: string }>()
+    .catch((err: Error) => ({
+      success: false,
+      message: err.message || 'Scraper execution failed.',
+    }));
+
+  return NextResponse.json(data);
 }

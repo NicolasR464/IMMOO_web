@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import ky from 'ky';
 import {
   Button as RACButton,
   Form,
@@ -17,6 +18,7 @@ import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Play, Plus, X } from 
 import { NumberField } from '@/components/ui/NumberField';
 import { Slider } from '@/components/ui/Slider';
 import { sliderToPrice } from '@/utils/slider';
+import { endpoints } from '@/utils/constants';
 
 const Home = () => {
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
@@ -27,6 +29,7 @@ const Home = () => {
   const [minBedrooms, setMinBedrooms] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [isError, setIsError] = useState(false);
 
   const handleBedroomsChange = (val: number) => {
     const newBedrooms = isNaN(val) ? 0 : val;
@@ -64,16 +67,45 @@ const Home = () => {
     }
   };
 
-  const handleRunPipeline = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setStatus('Fetching listings via ZenRows & analyzing features with Gemini...');
+  const handleRunPipeline = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    setTimeout(() => {
-      setLoading(false);
-      setStatus('Successfully analyzed properties and updated Google Sheets!');
-    }, 2500);
-  };
+  setLoading(true);
+  setIsError(false);
+  setStatus('Triggering pipeline & background worker...');
+
+  const minPrice = sliderToPrice(priceRange[0]);
+  const maxPrice = sliderToPrice(priceRange[1]);
+  const locationList = locations.map((loc) => loc.name);
+
+
+  const response = await ky
+    .post(endpoints.internal.SCRAPE, {
+      json: {
+        locations: locationList,
+        minPrice,
+        maxPrice,
+        minSpace: minSurface,
+        minRooms,
+        minBedrooms,
+      },
+    })
+    .json<{ success: boolean; message: string }>()
+    .catch((err: Error) => {
+      setIsError(true);
+      return { success: false, message: err.message || 'Failed to trigger scraping pipeline.' };
+    });
+
+  setLoading(false);
+
+  if (response.success) {
+    setStatus(response.message || 'Scraping job queued successfully! Check Google Sheets.');
+    return;
+  }
+
+  setIsError(true);
+  setStatus(response.message);
+};
 
   const isInvalidRoomCount = minRooms < minBedrooms;
 
@@ -224,9 +256,17 @@ const Home = () => {
 
           {/* Status Notification */}
           {status && (
-            <div className="flex items-center gap-3 p-4 bg-slate-900 border border-slate-800 text-sm font-medium text-slate-200 rounded-xl">
+            <div
+              className={`flex items-center gap-3 p-4 border text-sm font-medium rounded-xl ${
+                isError
+                  ? 'bg-rose-950/40 border-rose-900/80 text-rose-200'
+                  : 'bg-slate-900 border-slate-800 text-slate-200'
+              }`}
+            >
               {loading ? (
                 <Loader2 size={18} className="animate-spin text-indigo-400" />
+              ) : isError ? (
+                <AlertCircle size={18} className="text-rose-400" />
               ) : (
                 <CheckCircle2 size={18} className="text-emerald-400" />
               )}
