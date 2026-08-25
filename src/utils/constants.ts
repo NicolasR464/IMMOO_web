@@ -3,5 +3,5 @@ export const endpoints  = {
         SCRAPE: 'api/scrape'
     },
     external: {
-    scrapper : {MAIN : "/scrape"}
+    scrapper : {MAIN : "/search"}
 }}

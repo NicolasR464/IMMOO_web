@@ -5,7 +5,6 @@ import Image from 'next/image';
 import ky from 'ky';
 import {
   Button as RACButton,
-  Form,
   Input,
   Label,
   Separator,
@@ -24,23 +23,27 @@ const Home = () => {
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
   const [newLocation, setNewLocation] = useState('');
   const [priceRange, setPriceRange] = useState<number[]>([0, 100]);
-  const [minSurface, setMinSurface] = useState<number>(0);
-  const [minRooms, setMinRooms] = useState<number>(0);
-  const [minBedrooms, setMinBedrooms] = useState<number>(0);
+
+  // Use undefined so 0 is not hardcoded into input values
+  const [minSurface, setMinSurface] = useState<number | undefined>(undefined);
+  const [minRooms, setMinRooms] = useState<number | undefined>(undefined);
+  const [minBedrooms, setMinBedrooms] = useState<number | undefined>(undefined);
+
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
 
   const handleBedroomsChange = (val: number) => {
-    const newBedrooms = isNaN(val) ? 0 : val;
+    const newBedrooms = isNaN(val) ? undefined : val;
     setMinBedrooms(newBedrooms);
-    if (newBedrooms > minRooms) {
+
+    if (newBedrooms !== undefined && (minRooms === undefined || newBedrooms > minRooms)) {
       setMinRooms(newBedrooms);
     }
   };
 
   const handleRoomsChange = (val: number) => {
-    const newRooms = isNaN(val) ? 0 : val;
+    const newRooms = isNaN(val) ? undefined : val;
     setMinRooms(newRooms);
   };
 
@@ -67,52 +70,78 @@ const Home = () => {
     }
   };
 
-  const handleRunPipeline = async (e: React.FormEvent) => {
-  e.preventDefault();
+  // Validation logic
+  const roomsVal = minRooms ?? 0;
+  const bedroomsVal = minBedrooms ?? 0;
+  const isInvalidRoomCount = roomsVal > 0 && bedroomsVal > roomsVal;
 
-  setLoading(true);
-  setIsError(false);
-  setStatus('Triggering pipeline & background worker...');
+  const handleRunPipeline = (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
 
-  const minPrice = sliderToPrice(priceRange[0]);
-  const maxPrice = sliderToPrice(priceRange[1]);
-  const locationList = locations.map((loc) => loc.name);
-
-
-  const response = await ky
-    .post(endpoints.internal.SCRAPE, {
-      json: {
-        locations: locationList,
-        minPrice,
-        maxPrice,
-        minSpace: minSurface,
-        minRooms,
-        minBedrooms,
-      },
-    })
-    .json<{ success: boolean; message: string }>()
-    .catch((err: Error) => {
+    // Guard: Block execution if room validation fails
+    if (isInvalidRoomCount) {
       setIsError(true);
-      return { success: false, message: err.message || 'Failed to trigger scraping pipeline.' };
-    });
+      setStatus('Total rooms cannot be fewer than bedrooms.');
+      return;
+    }
 
-  setLoading(false);
+    // Auto-commit pending text in the input box
+    let finalLocations = locations.map((loc) => loc.name);
+    if (newLocation.trim()) {
+      const pendingLoc = newLocation.trim();
+      finalLocations = [...finalLocations, pendingLoc];
+      setLocations((prev) => [...prev, { id: Date.now().toString(), name: pendingLoc }]);
+      setNewLocation('');
+    }
 
-  if (response.success) {
-    setStatus(response.message || 'Scraping job queued successfully! Check Google Sheets.');
-    return;
-  }
+    if (finalLocations.length === 0) {
+      setIsError(true);
+      setStatus('Please enter at least one target location.');
+      return;
+    }
 
-  setIsError(true);
-  setStatus(response.message);
-};
+    setLoading(true);
+    setIsError(false);
+    setStatus('Triggering search pipeline...');
 
-  const isInvalidRoomCount = minRooms < minBedrooms;
+    const minPrice = sliderToPrice(priceRange[0]);
+    const maxPrice = sliderToPrice(priceRange[1]);
+
+    const payload = {
+      locations: finalLocations,
+      minPrice,
+      maxPrice,
+      minSpace: minSurface ?? 0,
+      minRooms: roomsVal,
+      minBedrooms: bedroomsVal,
+    };
+
+    ky.post(endpoints.internal.SCRAPE, {
+      json: payload,
+      timeout: 60000,
+    })
+      .json<{ status: string; message: string }>()
+      .then((response) => {
+        setLoading(false);
+        if (response.status === 'success') {
+          setIsError(false);
+          setStatus(response.message || 'Property search completed successfully!');
+        } else {
+          setIsError(true);
+          setStatus(response.message || 'Search pipeline returned an unexpected status.');
+        }
+      })
+      .catch((err: Error) => {
+        setLoading(false);
+        setIsError(true);
+        setStatus(err?.message || 'Failed to communicate with the search server.');
+      });
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex justify-center p-6 sm:p-12 font-sans">
       <div className="w-full max-w-2xl space-y-8">
-        
         {/* Header Logo */}
         <div className="w-full flex justify-center pt-2">
           <Image
@@ -144,8 +173,8 @@ const Home = () => {
           </a>
         </div>
 
-        <Form onSubmit={handleRunPipeline} className="space-y-6">
-          
+        {/* Form Container */}
+        <form onSubmit={handleRunPipeline} className="space-y-6">
           {/* Target Locations */}
           <div className="space-y-3">
             <Label className="text-sm font-bold uppercase tracking-wider text-slate-300 block">
@@ -199,7 +228,7 @@ const Home = () => {
             </div>
           </div>
 
-          {/* Official React Aria Multi-Thumb Price Slider */}
+          {/* Price Range Slider */}
           <div className="bg-slate-900/60 p-5 border border-slate-800 rounded-2xl">
             <Slider<number[]>
               label="Price Range"
@@ -215,15 +244,16 @@ const Home = () => {
             />
           </div>
 
-          {/* Steppers */}
+          {/* Stepper Inputs */}
           <div className="space-y-2">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <NumberField
                 label="Min Surface (m²)"
                 value={minSurface}
-                onChange={setMinSurface}
+                onChange={(val) => setMinSurface(isNaN(val) ? undefined : val)}
                 minValue={0}
                 maxValue={1000}
+                placeholder="0"
                 formatOptions={{ style: 'decimal' }}
               />
 
@@ -231,8 +261,9 @@ const Home = () => {
                 label="Min Rooms"
                 value={minRooms}
                 onChange={handleRoomsChange}
-                minValue={minBedrooms}
+                minValue={0}
                 maxValue={20}
+                placeholder="0"
                 formatOptions={{ style: 'decimal' }}
               />
 
@@ -242,6 +273,7 @@ const Home = () => {
                 onChange={handleBedroomsChange}
                 minValue={0}
                 maxValue={10}
+                placeholder="0"
                 formatOptions={{ style: 'decimal' }}
               />
             </div>
@@ -254,13 +286,13 @@ const Home = () => {
             )}
           </div>
 
-          {/* Status Notification */}
+          {/* Status Banner */}
           {status && (
             <div
-              className={`flex items-center gap-3 p-4 border text-sm font-medium rounded-xl ${
+              className={`flex items-center gap-3 p-4 border text-sm font-medium rounded-xl transition-all ${
                 isError
                   ? 'bg-rose-950/40 border-rose-900/80 text-rose-200'
-                  : 'bg-slate-900 border-slate-800 text-slate-200'
+                  : 'bg-emerald-950/40 border-emerald-900/80 text-emerald-200'
               }`}
             >
               {loading ? (
@@ -278,12 +310,12 @@ const Home = () => {
           <RACButton
             type="submit"
             isDisabled={loading || isInvalidRoomCount}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 data-[disabled]:bg-slate-800 data-[disabled]:text-slate-500 text-white font-bold text-base py-3.5 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 active:scale-[0.99] cursor-pointer focus:outline-none"
+            className="w-full bg-indigo-600 hover:bg-indigo-500 data-[disabled]:bg-slate-800 data-[disabled]:text-slate-500 data-[disabled]:cursor-not-allowed text-white font-bold text-base py-3.5 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 active:scale-[0.99] cursor-pointer focus:outline-none"
           >
             {loading ? (
               <>
                 <Loader2 size={18} className="animate-spin" />
-                Executing Pipeline...
+                Executing Search...
               </>
             ) : (
               <>
@@ -292,7 +324,7 @@ const Home = () => {
               </>
             )}
           </RACButton>
-        </Form>
+        </form>
       </div>
     </div>
   );
