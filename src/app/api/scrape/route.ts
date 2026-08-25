@@ -18,12 +18,9 @@ export async function POST(req: Request) {
   const data = await ky
     .post(process.env.SCRAPPER_BASE_URL + endpoints.external.scrapper.MAIN, {
       headers: {
-        Authorization: `Bearer ${process.env.SCRAPER_API_KEY}`,
+        Authorization: `Bearer ${session?.accessToken}`,
       },
-      json: {
-        ...body,
-        googleAccessToken: session.accessToken, // Pass OAuth token to Python
-      },
+      json: body
     })
     .json<{ success: boolean; message: string }>()
     .catch((err: Error) => ({

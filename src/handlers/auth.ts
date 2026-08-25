@@ -8,7 +8,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       clientSecret: process.env.AUTH_GOOGLE_SECRET,
       authorization: {
         params: {
-          // Changed to drive.file: Only grants access to files opened by or shared with this specific app
           scope: 'openid email profile https://www.googleapis.com/auth/drive.file',
           access_type: 'offline',
           prompt: 'consent',
@@ -29,3 +28,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
 });
+
+
