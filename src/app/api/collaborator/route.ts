@@ -5,7 +5,6 @@ import { endpoints } from '@/utils/constants';
 
 export async function POST(req: Request) {
   const session = await auth();
-  
 
   if (!session?.accessToken) {
     return NextResponse.json(
@@ -16,18 +15,21 @@ export async function POST(req: Request) {
 
   const body = await req.json();
 
+
+  console.log({body})
+
   const data = await ky
-    .post(process.env.SCRAPPER_BASE_URL + endpoints.external.scrapper.MAIN, {
+    .post(process.env.SCRAPPER_BASE_URL + endpoints.external.scrapper.ADD_COLLABORATOR, {
       headers: {
         Authorization: `Bearer ${session?.accessToken}`,
       },
       json: body,
-      timeout: 180000,
+      timeout: 30000,
     })
     .json<{ success: boolean; message: string }>()
     .catch((err: Error) => ({
       success: false,
-      message: err.message || 'Scraper execution failed.',
+      message: err.message || 'Failed to add collaborator column.',
     }));
 
   return NextResponse.json(data);

@@ -11,7 +11,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" suppressHydrationWarning className="h-full dark">
       <body
         suppressHydrationWarning
-        className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased flex flex-col"
+className="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col"
       >
         {/* SVG Filter to bring out cyan/indigo tones from dark navy logo */}
         <svg className="hidden">
@@ -34,7 +34,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {/* Logo on far left */}
             <div className="flex items-center">
               <Image
-                src="/logo_immoo_main.png"
+                src="https://res.cloudinary.com/bgnfvyt8/image/upload/v1787783775/immoo_logo_main2.png"
                 alt="IMMOO Logo"
                 width={280}
                 height={70}
