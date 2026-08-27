@@ -13,7 +13,7 @@ import {
   TagList,
   TextField,
 } from 'react-aria-components';
-import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Play, Plus, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Play, Plus, UserPlus, X } from 'lucide-react';
 import { NumberField } from '@/components/ui/NumberField';
 import { Slider } from '@/components/ui/Slider';
 import { sliderToPrice } from '@/utils/slider';
@@ -24,12 +24,18 @@ const Home = () => {
   const [newLocation, setNewLocation] = useState('');
   const [priceRange, setPriceRange] = useState<number[]>([0, 100]);
 
-  // Use undefined so 0 is not hardcoded into input values
   const [minSurface, setMinSurface] = useState<number | undefined>(undefined);
   const [minRooms, setMinRooms] = useState<number | undefined>(undefined);
   const [minBedrooms, setMinBedrooms] = useState<number | undefined>(undefined);
 
+  // Collaborator State
+  const [collaboratorName, setCollaboratorName] = useState('');
+  const [addingColab, setAddingColab] = useState(false);
+  const [spreadsheetId, setSpreadsheetId] = useState<string | null>(null);
+
+  // Track Pipeline Execution & Success
   const [loading, setLoading] = useState(false);
+  const [pipelineSuccess, setPipelineSuccess] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
 
@@ -70,7 +76,41 @@ const Home = () => {
     }
   };
 
-  // Validation logic
+
+  const handleAddCollaborator = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!collaboratorName.trim()) return;
+
+    setAddingColab(true);
+    setIsError(false);
+    setStatus(`Adding rating column for ${collaboratorName.trim()}...`);
+
+    ky.post(endpoints.internal.ADD_COLLABORATOR, {
+      json: { 
+        collaborator_name: collaboratorName.trim(),
+        spreadsheet_id: spreadsheetId,
+    },
+      timeout: 180000,
+    })
+      .json<{ success: boolean; message: string }>()
+      .then((response) => {
+        setAddingColab(false);
+        if (response.success) {
+          setIsError(false);
+          setStatus(`Added Rating (${collaboratorName.trim()}) column to Google Sheet!`);
+          setCollaboratorName('');
+        } else {
+          setIsError(true);
+          setStatus(response.message || 'Failed to add collaborator column.');
+        }
+      })
+      .catch((err: Error) => {
+        setAddingColab(false);
+        setIsError(true);
+        setStatus(err?.message || 'Failed to connect to backend server.');
+      });
+  };
+
   const roomsVal = minRooms ?? 0;
   const bedroomsVal = minBedrooms ?? 0;
   const isInvalidRoomCount = roomsVal > 0 && bedroomsVal > roomsVal;
@@ -79,14 +119,12 @@ const Home = () => {
     e.preventDefault();
     e.stopPropagation();
 
-    // Guard: Block execution if room validation fails
     if (isInvalidRoomCount) {
       setIsError(true);
       setStatus('Total rooms cannot be fewer than bedrooms.');
       return;
     }
 
-    // Auto-commit pending text in the input box
     let finalLocations = locations.map((loc) => loc.name);
     if (newLocation.trim()) {
       const pendingLoc = newLocation.trim();
@@ -102,6 +140,7 @@ const Home = () => {
     }
 
     setLoading(true);
+    setPipelineSuccess(false);
     setIsError(false);
     setStatus('Triggering search pipeline...');
 
@@ -118,31 +157,49 @@ const Home = () => {
     };
 
     ky.post(endpoints.internal.SCRAPE, {
-      json: payload,
-      timeout: 60000,
-    })
-      .json<{ status: string; message: string }>()
-      .then((response) => {
-        setLoading(false);
-        if (response.status === 'success') {
-          setIsError(false);
-          setStatus(response.message || 'Property search completed successfully!');
-        } else {
-          setIsError(true);
-          setStatus(response.message || 'Search pipeline returned an unexpected status.');
-        }
-      })
+  json: payload,
+  timeout: 180000,
+})
+  .json<{ status: string; message: string; spreadsheet_id?: string }>()
+  .then((response) => {
+    setLoading(false);
+    if (response.status === 'success') {
+      setIsError(false);
+      setPipelineSuccess(true);
+      
+      if (response.spreadsheet_id) {
+        setSpreadsheetId(response.spreadsheet_id);
+      }
+      
+      setStatus(response.message || 'Property search completed successfully!');
+    } else {
+      setIsError(true);
+      setPipelineSuccess(false);
+      setStatus(response.message || 'Search pipeline returned an unexpected status.');
+    }
+  })
       .catch((err: Error) => {
         setLoading(false);
         setIsError(true);
+        setPipelineSuccess(false);
         setStatus(err?.message || 'Failed to communicate with the search server.');
       });
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex justify-center p-6 sm:p-12 font-sans">
-      <div className="w-full max-w-2xl space-y-8">
-        {/* Header Logo */}
+    <div className="relative w-full text-slate-100 flex justify-center p-6 sm:p-12 font-sans">
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <Image
+          src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fimg.freepik.com%2Fpremium-photo%2Fphoto-modern-architecture-urban-buildings_198067-76294.jpg&f=1&nofb=1&ipt=51affc4407689a5de757a0bd5c1551495695bfa471e10753d92b00c5b967a205"
+          alt="Background"
+          fill
+          priority
+          className="object-cover opacity-15 filter blur-[2px] brightness-75 scale-105"
+        />
+        <div className="absolute inset-0 bg-radial from-transparent via-slate-950/60 to-slate-950" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-2xl space-y-8">
         <div className="w-full flex justify-center pt-2">
           <Image
             src="/logo_immoo_txt.png"
@@ -157,7 +214,7 @@ const Home = () => {
         <Separator />
 
         {/* Subheader */}
-        <div className="flex justify-between items-center pb-6">
+        <div className="flex justify-between items-center pb-2">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-white">
               Search Control Center
@@ -295,7 +352,7 @@ const Home = () => {
                   : 'bg-emerald-950/40 border-emerald-900/80 text-emerald-200'
               }`}
             >
-              {loading ? (
+              {loading || addingColab ? (
                 <Loader2 size={18} className="animate-spin text-indigo-400" />
               ) : isError ? (
                 <AlertCircle size={18} className="text-rose-400" />
@@ -325,6 +382,31 @@ const Home = () => {
             )}
           </RACButton>
         </form>
+
+        {/* Collaborator Rating Column Section - Conditionally rendered only after pipeline succeeds */}
+        {pipelineSuccess && (
+          <div className="bg-slate-900/60 p-4 border border-slate-800 rounded-2xl space-y-3 transition-all animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
+              Add Collaborator Rating Column
+            </Label>
+            <form onSubmit={handleAddCollaborator} className="flex gap-2">
+              <TextField aria-label="Collaborator Name" value={collaboratorName} onChange={setCollaboratorName} className="flex-1">
+                <Input
+                  placeholder="Enter collaborator name (e.g. Alex)..."
+                  className="w-full bg-slate-950 border border-slate-800 text-sm px-4 py-2.5 rounded-xl focus:outline-none focus:border-indigo-500 text-slate-100 placeholder:text-slate-500 transition"
+                />
+              </TextField>
+              <RACButton
+                type="submit"
+                isDisabled={addingColab || !collaboratorName.trim()}
+                className="bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-800 text-indigo-200 px-4 py-2.5 rounded-xl text-sm font-semibold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none"
+              >
+                {addingColab ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
+                Add Column
+              </RACButton>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   );
