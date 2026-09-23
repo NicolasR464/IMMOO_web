@@ -6,6 +6,8 @@
     "node": "22.12.0"
   },
   "scripts": {
+    "secrets:fetch": "bash scripts/fetch-secrets.sh",
+    "predev": "bash scripts/fetch-secrets.sh",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
